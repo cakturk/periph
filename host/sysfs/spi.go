@@ -483,16 +483,15 @@ func spiIOCTx(l int) uint {
 // Also documented as struct spi_transfer at
 // https://www.kernel.org/doc/html/latest/driver-api/spi.html
 type spiIOCTransfer struct {
-	tx          uint64 // Pointer to byte slice
-	rx          uint64 // Pointer to byte slice
-	length      uint32 // buffer length of tx and rx in bytes
-	speedHz     uint32 // temporarily override the speed
-	delayUsecs  uint16 // µs to sleep before selecting the device before the next transfer
-	bitsPerWord uint8  // temporarily override the number of bytes per word
-	csChange    uint8  // true to deassert CS before next transfer
-	txNBits     uint8
-	rxNBits     uint8
-	pad         uint16
+	tx             uint64 // Pointer to byte slice
+	rx             uint64 // Pointer to byte slice
+	length         uint32 // buffer length of tx and rx in bytes
+	speedHz        uint32 // temporarily override the speed
+	delayUsecs     uint16 // µs to sleep before selecting the device before the next transfer
+	interbyteUsecs uint16 // µs to sleep between each byte of an SPI transfer
+	bitsPerWord    uint8  // temporarily override the number of bytes per word
+	csChange       uint8  // true to deassert CS before next transfer
+	pad            uint32
 }
 
 func (s *spiIOCTransfer) reset(w, r []byte, f physic.Frequency, bitsPerWord uint8, csInvert bool) {
@@ -516,8 +515,6 @@ func (s *spiIOCTransfer) reset(w, r []byte, f physic.Frequency, bitsPerWord uint
 	} else {
 		s.csChange = 0
 	}
-	s.txNBits = 0
-	s.rxNBits = 0
 	s.pad = 0
 }
 
