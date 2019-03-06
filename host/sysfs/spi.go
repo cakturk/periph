@@ -234,10 +234,8 @@ func (s *spiConn) Read(b []byte) (int, error) {
 	defer s.mu.Unlock()
 	s.p[0].W = nil
 	s.p[0].R = b
-	if err := s.txPackets(s.p[:1]); err != nil {
-		return 0, fmt.Errorf("sysfs-spi: Read() failed: %v", err)
-	}
-	return len(b), nil
+	r := s.f.(io.Reader)
+	return r.Read(b)
 }
 
 // Write implements io.Writer.
