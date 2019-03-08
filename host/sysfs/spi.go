@@ -473,7 +473,7 @@ var (
 // spiIOCTx(l) calculates the equivalent of SPI_IOC_MESSAGE(l) to execute a
 // transaction.
 func spiIOCTx(l int) uint {
-	return fs.IOW(spiIOCMagic, 0, uint(l)*32)
+	return fs.IOW(spiIOCMagic, 0, uint(l)*uint(unsafe.Sizeof(spiIOCTransfer{})))
 }
 
 // spiIOCTransfer is spi_ioc_transfer in linux/spi/spidev.h.
@@ -489,7 +489,7 @@ type spiIOCTransfer struct {
 	interbyteUsecs uint16 // µs to sleep between each byte of an SPI transfer
 	bitsPerWord    uint8  // temporarily override the number of bytes per word
 	csChange       uint8  // true to deassert CS before next transfer
-	pad            uint32
+	pad            uint64
 }
 
 func (s *spiIOCTransfer) reset(w, r []byte, f physic.Frequency, bitsPerWord uint8, csInvert bool) {
