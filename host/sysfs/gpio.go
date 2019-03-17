@@ -20,6 +20,7 @@ import (
 	"periph.io/x/periph/conn/gpio/gpioreg"
 	"periph.io/x/periph/conn/physic"
 	"periph.io/x/periph/conn/pin"
+	"periph.io/x/periph/host/distro"
 	"periph.io/x/periph/host/fs"
 )
 
@@ -481,16 +482,28 @@ func (d *driverGPIO) parseGPIOChip(path string) error {
 	if err != nil {
 		return err
 	}
+	var pinRootFn = func(pinNr int) (string, error) {
+		return fmt.Sprintf("/sys/class/gpio/gpio%d/", pinNr), nil
+	}
+	if hw, ok := distro.CPUInfo()["Hardware"]; ok {
+		if hw == "sun7i" {
+			pinRootFn = findPinRoot
+		}
+	}
 	// TODO(maruel): The chip driver may lie and lists GPIO pins that cannot be
 	// exported. The only way to know about it is to export it before opening.
 	for i := base; i < base+number; i++ {
 		if _, ok := Pins[i]; ok {
 			return fmt.Errorf("found two pins with number %d", i)
 		}
+		pinRoot, err := pinRootFn(i)
+		if err != nil {
+			return err
+		}
 		p := &Pin{
 			number: i,
 			name:   fmt.Sprintf("GPIO%d", i),
-			root:   fmt.Sprintf("/sys/class/gpio/gpio%d/", i),
+			root:   pinRoot,
 		}
 		Pins[i] = p
 		if err := gpioreg.Register(p); err != nil {
@@ -503,6 +516,20 @@ func (d *driverGPIO) parseGPIOChip(path string) error {
 		}
 	}
 	return nil
+}
+
+func findPinRoot(pinNr int) (string, error) {
+	items, err := filepath.Glob(fmt.Sprintf("/sys/class/gpio/gpio%d_*", pinNr))
+	if err != nil {
+		return "", err
+	}
+	if len(items) == 0 {
+		return "", errors.New("sysfs: gpio: findPinRoot: no GPIO pin found")
+	}
+	if len(items) > 1 {
+		return "", errors.New("sysfs: gpio: findPinRoot: too many GPIO pins found")
+	}
+	return items[0] + "/", nil
 }
 
 func init() {
